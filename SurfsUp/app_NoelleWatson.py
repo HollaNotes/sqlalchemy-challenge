@@ -52,3 +52,24 @@ def welcome():
 @app.route("/api/v1.0/precipitation")
 def precipitation():
     
+    year_from_recent = dt.date(2017, 8, 23) - dt.timedelta(days=365)
+
+    precip_date_year_from_recent = session.query(Measurement.date, Measurement.prcp).\
+    filter(Measurement.date >= year_from_recent).all()
+
+    precip = {date: prcp for date, prcp in precipitation}
+    return jsonify(precip)
+
+@app.route("/api/v1.0/stations")
+def stations():
+    stations = session.query(Station.station).all()
+    stations = list(np.ravel(stations))
+    return jsonify(stations)
+
+@app.route("/api/v1.0/tobs") 
+def tobs():
+    most_active_station_tobs = session.query(Measurement.date, Measurement.tobs).\
+    filter(Measurement.station == 'USC00519281').\
+    filter(Measurement.date >= year_from_recent).all()
+    tobs = list(np.ravel(most_active_station_tobs))
+    return jsonify(tobs)
