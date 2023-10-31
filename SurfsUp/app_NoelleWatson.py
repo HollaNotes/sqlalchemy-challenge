@@ -44,12 +44,13 @@ app = Flask(__name__)
 def welcome():
     """List all available api routes."""
     return (
+        f"Welcome to my climate api!<br/></br>"
         f"Available Routes:<br/>"
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
-        f"/api/v1.0/<start><br/>"
-        f"/api/v1.0/<start>/<end>"
+        f"/api/v1.0/(start_date_yyyy-mm-dd)<br/>"
+        f"/api/v1.0/(start_date_yyyy-mm-dd)/(end_date_yyyy-mm-dd)"    
     )
 
 @app.route("/api/v1.0/precipitation")
@@ -60,10 +61,13 @@ def precipitation():
     # Take year_from_recent from climate.ipynb
     year_prior = dt.date(2017, 8, 23) - dt.timedelta(days=365)
 
+    # Find precipitaion data for past year of data
     precip_year_prior = session.query(Measurement.date, Measurement.prcp).filter(Measurement.date >= year_prior).all()
 
+    # Close session after query
     session.close()
 
+    # Convert to dictionary
     precip = []
     for date, prcp in precip_year_prior:
         precip_dict = {}
@@ -78,10 +82,13 @@ def stations():
     # Create session link from Python to DB
     session = Session(engine)
 
+    # Find list of all stations
     stations = session.query(Station.station).all()
 
+    # Close session after query
     session.close()
 
+    # Return list of stations
     stations = list(np.ravel(stations))
     return jsonify(stations)
 
@@ -90,52 +97,63 @@ def tobs():
     # Create session link from Python to DB
     session = Session(engine)
 
+    # Find dates and temperature observations of the most active station for the past year
     year_from_recent = dt.date(2017, 8, 23) - dt.timedelta(days=365)
     most_active_station_tobs = session.query(Measurement.date, Measurement.tobs).\
     filter(Measurement.station == 'USC00519281').\
     filter(Measurement.date >= year_from_recent).all()
 
+    # Close session after query
     session.close()
 
+    # Return list
     tobs = list(np.ravel(most_active_station_tobs))
     return jsonify(tobs)
 
 
-@app.route("/api/v1.0/start_date_yyyy-mm-dd/<start>")
+@app.route("/api/v1.0/<start>")
 def start(start):
     # Start engine
     session = Session(engine)
 
+    # Create select parameters
     sel = [Measurement.date, func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)]
 
-    tobs_start_date = session.query(*sel).filter(Measurement.date >= start).group_by(Measurement.date).order_by(Measurement.date).all()
-
+    # Find information based on start date entered
+    start_date = session.query(*sel).filter(Measurement.date >= start).group_by(Measurement.date).order_by(Measurement.date).all()
+    
+    # Close session after query
     session.close()
 
-    tobs_start_date_dict = {}
+    # Create an empty dictionary
+    start_date_dict = {}
 
-    for date, min_temp, avg_temp, max_temp in tobs_start_date:
-        tobs_start_date_dict[date] = (min_temp, avg_temp, max_temp)
+    for date, min_temp, avg_temp, max_temp in start_date:
+        start_date_dict[date] = (min_temp, avg_temp, max_temp)
             
-    return jsonify(tobs_start_date_dict)    
+    return jsonify(start_date_dict)    
     
 @app.route("/api/v1.0/<start>/<end>")
 def start_end(start, end):
     # Start engine
     session = Session(engine)
 
+    # Create select parameters
     sel = [Measurement.date, func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)]
 
-    tobs_startend_date = session.query(*sel).filter(Measurement.date >= start).filter(Measurement.date <= end).group_by(Measurement.date).order_by(Measurement.date).all()
+    # Find information based on start/end dates entered
+    startend_date = session.query(*sel).filter(Measurement.date >= start).filter(Measurement.date <= end).group_by(Measurement.date).order_by(Measurement.date).all()
 
+    # Close session after query
     session.close()
 
-    tobs_startend_date_dict = {}
+    # Create an empty dictionary
+    startend_date_dict = {}
 
-    for date, min_temp, avg_temp, max_temp in tobs_startend_date:
-        tobs_startend_date_dict[date] = (min_temp, avg_temp, max_temp)
+    for date, min_temp, avg_temp, max_temp in startend_date:
+        startend_date_dict[date] = (min_temp, avg_temp, max_temp)
             
-    return jsonify(tobs_startend_date_dict) 
+    return jsonify(startend_date_dict) 
 
 
 if __name__ == '__main__':
