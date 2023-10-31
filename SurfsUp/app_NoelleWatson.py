@@ -68,8 +68,14 @@ def stations():
 
 @app.route("/api/v1.0/tobs") 
 def tobs():
+    year_from_recent = dt.date(2017, 8, 23) - dt.timedelta(days=365)
     most_active_station_tobs = session.query(Measurement.date, Measurement.tobs).\
     filter(Measurement.station == 'USC00519281').\
     filter(Measurement.date >= year_from_recent).all()
     tobs = list(np.ravel(most_active_station_tobs))
     return jsonify(tobs)
+
+
+@app.route("/api/v1.0/<start>")
+@app.route("/api/v1.0/<start>/<end>")
+def
