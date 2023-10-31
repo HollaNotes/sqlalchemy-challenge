@@ -14,7 +14,7 @@ from flask import Flask, jsonify
 #################################################
 # Database Setup
 #################################################
-engine = create_engine("sqlite:///hawaii.sqlite")
+engine = create_engine("sqlite:///Resources/hawaii.sqlite")
 
 # reflect an existing database into a new model
 Base = automap_base()
@@ -55,15 +55,21 @@ def welcome():
 def precipitation():
     # Create session link from Python to DB
     session = Session(engine)
-
+ 
     # Take year_from_recent from climate.ipynb
-    year_from_recent = dt.date(2017, 8, 23) - dt.timedelta(days=365)
+    year_prior = dt.date(2017, 8, 23) - dt.timedelta(days=365)
 
-    precip_date_year_from_recent = session.query(Measurement.date, Measurement.prcp).filter(Measurement.date >= year_from_recent).all()
+    precip_year_prior = session.query(Measurement.date, Measurement.prcp).filter(Measurement.date >= year_prior).all()
 
     session.close()
 
-    precip = {date: prcp for date, prcp in precipitation}
+    precip = []
+    for date, prcp in precip_year_prior:
+        precip_dict = {}
+        precip_dict["date"] = date
+        precip_dict["prcp"] = prcp
+        precip.append(precip_dict)
+    
     return jsonify(precip)
 
 @app.route("/api/v1.0/stations")
@@ -94,7 +100,24 @@ def tobs():
     return jsonify(tobs)
 
 
+@app.route("/api/v1.0/<start>")
+def start(start):
+    # Start engine
+    session = Session(engine)
 
+    sel = [Measurement.date, func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)]
+
+    tobs_start_date = session.query(*sel).filter(Measurement.date >= start).group_by(Measurement.date).order_by(Measurement.date).all()
+
+    session.close()
+
+    tobs_start_date_dict = {}
+
+    for date, min_temp, avg_temp, max_temp in tobs_start_date:
+        tobs_start_date_dict[date] = (min_temp, avg_temp, max_temp)
+
+    return jsonify(tobs_start_date_dict)    
+    
 
 
 
