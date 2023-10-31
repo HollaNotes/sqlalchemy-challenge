@@ -48,7 +48,8 @@ def welcome():
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
-        f"/api/v1.0/temp/start/end"
+        f"/api/v1.0/<start><br/>"
+        f"/api/v1.0/<start>/<end>"
     )
 
 @app.route("/api/v1.0/precipitation")
@@ -100,7 +101,7 @@ def tobs():
     return jsonify(tobs)
 
 
-@app.route("/api/v1.0/<start>")
+@app.route("/api/v1.0/start_date_yyyy-mm-dd/<start>")
 def start(start):
     # Start engine
     session = Session(engine)
@@ -115,10 +116,26 @@ def start(start):
 
     for date, min_temp, avg_temp, max_temp in tobs_start_date:
         tobs_start_date_dict[date] = (min_temp, avg_temp, max_temp)
-
+            
     return jsonify(tobs_start_date_dict)    
     
+@app.route("/api/v1.0/<start>/<end>")
+def start_end(start, end):
+    # Start engine
+    session = Session(engine)
 
+    sel = [Measurement.date, func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)]
+
+    tobs_startend_date = session.query(*sel).filter(Measurement.date >= start).filter(Measurement.date <= end).group_by(Measurement.date).order_by(Measurement.date).all()
+
+    session.close()
+
+    tobs_startend_date_dict = {}
+
+    for date, min_temp, avg_temp, max_temp in tobs_startend_date:
+        tobs_startend_date_dict[date] = (min_temp, avg_temp, max_temp)
+            
+    return jsonify(tobs_startend_date_dict) 
 
 
 if __name__ == '__main__':
